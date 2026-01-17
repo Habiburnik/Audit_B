@@ -1,0 +1,5 @@
+.github
+.vscode
+bin
+obj
+appsettings.json
