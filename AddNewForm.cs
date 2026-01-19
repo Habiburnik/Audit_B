@@ -83,7 +83,7 @@ public partial class AddNewForm : Form
         lblSelectProjectCode = new Label() { Text = "Select_Project_Code :", Location = new Point(15, 50), AutoSize = true };
         cbProjectCode = new ComboBox() { Location = new Point(160, 47), Size = new Size(240, 24), DropDownStyle = ComboBoxStyle.DropDownList };
 
-        txtBatchList = new TextBox() { Location = new Point(15, 85), Size = new Size(385, 220), Multiline = true, ScrollBars = ScrollBars.Vertical }; 
+        txtBatchList = new TextBox() { Location = new Point(15, 85), Size = new Size(385, 220), Multiline = true, ScrollBars = ScrollBars.Vertical };
 
         btnAddBatches = new Button() { Text = "Add Batches", Location = new Point(130, 320), Size = new Size(120, 30) };
         btnAddBatches.Click += BtnAddBatches_Click;
@@ -173,6 +173,10 @@ public partial class AddNewForm : Form
         else if (rb5?.Checked == true) lineValue = 5;
 
         var batches = txtBatchList.Lines.Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
+
+        // ADD THIS: Track successfully added batches
+        List<string> successfulBatches = new List<string>();
+
         try
         {
             if (dbConnection?.State != ConnectionState.Open)
@@ -188,17 +192,30 @@ public partial class AddNewForm : Form
                 try
                 {
                     insCmd.ExecuteNonQuery();
+
+                    // ADD THIS: Mark batch as successful
+                    successfulBatches.Add(batch);
+
+                    // ADD THIS: Remove from textbox immediately after success
+                    RemoveBatchFromTextbox(batch);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    MessageBox.Show($"An error occurred adding batch '{batch}': {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Continue to next batch instead of return
                 }
             }
 
-            MessageBox.Show("Batch Added Successfully.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            txtBatchList.Clear();
-            cbProjectCode?.SelectedIndex = -1;
+            if (successfulBatches.Count > 0)
+            {
+                MessageBox.Show($"{successfulBatches.Count} Batch(es) Added Successfully.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            // Clear project code only if all batches were successful
+            if (successfulBatches.Count == batches.Count)
+            {
+                cbProjectCode.SelectedIndex = -1;
+            }
         }
         catch (Exception ex)
         {
@@ -209,6 +226,18 @@ public partial class AddNewForm : Form
             if (dbConnection?.State == ConnectionState.Open)
                 dbConnection?.Close();
         }
+    }
+
+    // ADD THIS NEW METHOD
+    private void RemoveBatchFromTextbox(string batchToRemove)
+    {
+        if (txtBatchList == null) return;
+
+        var remainingLines = txtBatchList.Lines
+            .Where(line => line.Trim() != batchToRemove.Trim())
+            .ToArray();
+
+        txtBatchList.Lines = remainingLines;
     }
 
     private void BtnAddProject_Click(object? sender, EventArgs e)

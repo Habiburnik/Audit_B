@@ -274,6 +274,7 @@ public partial class MainMenuForm : Form
         btnAuditCancel.BackColor = Color.FromArgb(150, 150, 150);
         btnAuditCancel.ForeColor = Color.White;
         btnAuditCancel.Enabled = false;
+        btnAuditCancel.Visible = false;
         btnAuditCancel.Click += BtnAuditCancel_Click;
         if (btnAuditCancel.Enabled)
         {
@@ -1206,7 +1207,7 @@ public partial class MainMenuForm : Form
                      AND (
                          (status IN (0, -2))
                          OR
-                         (status IN (-1, 1) AND " + edtEmpType?.Text + @" = @userid)
+                         (status IN ( 1) AND " + edtEmpType?.Text + @" = @userid)
                      )
                      ORDER BY 
                          CASE status 

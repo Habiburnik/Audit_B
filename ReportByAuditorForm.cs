@@ -105,7 +105,7 @@ namespace Audit_B
             cbProjectList = new ComboBox();
             cbProjectList.Location = new Point(10, 35);
             cbProjectList.Size = new Size(180, 25);
-            cbProjectList.DropDownStyle = ComboBoxStyle.DropDownList;
+            cbProjectList.DropDownStyle = ComboBoxStyle.DropDown;
 
             // Show Complete Checkbox
             checkBoxShowComplete = new CheckBox();
@@ -213,11 +213,13 @@ namespace Audit_B
             dataGridView.AllowUserToAddRows = false;
             dataGridView.AllowUserToDeleteRows = false;
             dataGridView.ReadOnly = true;
-            dataGridView.SelectionMode = DataGridViewSelectionMode.CellSelect;
+            dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dataGridView.BackgroundColor = Color.White;
             dataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None;
             dataGridView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridView.DoubleClick += DataGridView_DoubleClick;
+            dataGridView.ColumnHeaderMouseClick += DataGridView_ColumnHeaderMouseClick;
+            dataGridView.DataBindingComplete += dataGridView_DataBindingComplete;
 
             // ===== BOTTOM PANEL =====
             pnlBottom = new Panel();
@@ -806,36 +808,55 @@ SELECT
     MAX(UserName) AS Name,
     COUNT(Batch_name) AS Batch_Count,
     SUM(sample_count) AS Sample_count,
+CONCAT(
+    CAST(SUM(
+        DATEPART(SECOND, Audit_Time) +
+        DATEPART(MINUTE, Audit_Time) * 60 +
+        DATEPART(HOUR,   Audit_Time) * 3600
+    ) / 3600 AS VARCHAR(10)),
+    ':',
+    RIGHT('0' + CAST(
+        (SUM(
+            DATEPART(SECOND, Audit_Time) +
+            DATEPART(MINUTE, Audit_Time) * 60 +
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 3600) / 60 AS VARCHAR(2)), 2),
+    ':',
+    RIGHT('0' + CAST(
+        SUM(
+            DATEPART(SECOND, Audit_Time) +
+            DATEPART(MINUTE, Audit_Time) * 60 +
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 60 AS VARCHAR(2)), 2)
+) AS TotalAuditTime,
+CASE WHEN COUNT(Batch_name) > 0 THEN
     CONCAT(
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) / 3600 AS VARCHAR(10)), 2),
+        CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) / 3600 AS VARCHAR(10)),
         ':',
-        RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 3600) / 60 AS VARCHAR(2)), 2),
+        RIGHT('0' + CAST((
+            (SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)) % 3600
+        ) / 60 AS VARCHAR(2)), 2),
         ':',
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 60 AS VARCHAR(2)), 2)
-    ) AS TotalAuditTime,
-    CASE WHEN COUNT(Batch_name) > 0 THEN
-        CONCAT(
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
+        RIGHT('0' + CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
                 DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) / 3600 AS VARCHAR(10)), 2),
-            ':',
-            RIGHT('0' + CAST(((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 3600) / 60 AS VARCHAR(2)), 2),
-            ':',
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 60 AS VARCHAR(2)), 2)
-        )
-    ELSE
-        '00:00:00'
-    END AS AvgAuditTimePerBatch,
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) % 60 AS VARCHAR(2)), 2)
+    )
+ELSE '00:00:00'
+END AS AvgAuditTimePerBatch,
     (
         SELECT STRING_AGG(project_code, ', ')
         FROM ProjectCodes
@@ -883,36 +904,55 @@ SELECT
     MAX(UserName) AS Name,
     COUNT(Batch_name) AS Batch_Count,
     SUM(sample_count) AS Sample_count,
+CONCAT(
+    CAST(SUM(
+        DATEPART(SECOND, Audit_Time) +
+        DATEPART(MINUTE, Audit_Time) * 60 +
+        DATEPART(HOUR,   Audit_Time) * 3600
+    ) / 3600 AS VARCHAR(10)),
+    ':',
+    RIGHT('0' + CAST(
+        (SUM(
+            DATEPART(SECOND, Audit_Time) +
+            DATEPART(MINUTE, Audit_Time) * 60 +
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 3600) / 60 AS VARCHAR(2)), 2),
+    ':',
+    RIGHT('0' + CAST(
+        SUM(
+            DATEPART(SECOND, Audit_Time) +
+            DATEPART(MINUTE, Audit_Time) * 60 +
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 60 AS VARCHAR(2)), 2)
+) AS TotalAuditTime,
+CASE WHEN COUNT(Batch_name) > 0 THEN
     CONCAT(
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) / 3600 AS VARCHAR(10)), 2),
+        CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) / 3600 AS VARCHAR(10)),
         ':',
-        RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 3600) / 60 AS VARCHAR(2)), 2),
+        RIGHT('0' + CAST((
+            (SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)) % 3600
+        ) / 60 AS VARCHAR(2)), 2),
         ':',
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 60 AS VARCHAR(2)), 2)
-    ) AS TotalAuditTime,
-    CASE WHEN COUNT(Batch_name) > 0 THEN
-        CONCAT(
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
+        RIGHT('0' + CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
                 DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) / 3600 AS VARCHAR(10)), 2),
-            ':',
-            RIGHT('0' + CAST(((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 3600) / 60 AS VARCHAR(2)), 2),
-            ':',
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 60 AS VARCHAR(2)), 2)
-        )
-    ELSE
-        '00:00:00'
-    END AS AvgAuditTimePerBatch
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) % 60 AS VARCHAR(2)), 2)
+    )
+ELSE '00:00:00'
+END AS AvgAuditTimePerBatch
 FROM (
     SELECT
         Batch_name,
@@ -1009,35 +1049,54 @@ SELECT
         DATEPART(MINUTE, Audit_Time) * 60 +
         DATEPART(HOUR, Audit_Time) * 3600) AS TotalSeconds,
     CONCAT(
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
+    CAST(SUM(
+        DATEPART(SECOND, Audit_Time) +
+        DATEPART(MINUTE, Audit_Time) * 60 +
+        DATEPART(HOUR,   Audit_Time) * 3600
+    ) / 3600 AS VARCHAR(10)),
+    ':',
+    RIGHT('0' + CAST(
+        (SUM(
+            DATEPART(SECOND, Audit_Time) +
             DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) / 3600 AS VARCHAR(10)), 2),
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 3600) / 60 AS VARCHAR(2)), 2),
+    ':',
+    RIGHT('0' + CAST(
+        SUM(
+            DATEPART(SECOND, Audit_Time) +
+            DATEPART(MINUTE, Audit_Time) * 60 +
+            DATEPART(HOUR,   Audit_Time) * 3600
+        ) % 60 AS VARCHAR(2)), 2)
+) AS TotalAuditTime,
+CASE WHEN COUNT(Batch_name) > 0 THEN
+    CONCAT(
+        CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) / 3600 AS VARCHAR(10)),
         ':',
-        RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 3600) / 60 AS VARCHAR(2)), 2),
+        RIGHT('0' + CAST((
+            (SUM(
+                DATEPART(SECOND, Audit_Time) +
+                DATEPART(MINUTE, Audit_Time) * 60 +
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)) % 3600
+        ) / 60 AS VARCHAR(2)), 2),
         ':',
-        RIGHT('0' + CAST(SUM(DATEPART(SECOND, Audit_Time) +
-            DATEPART(MINUTE, Audit_Time) * 60 +
-            DATEPART(HOUR, Audit_Time) * 3600) % 60 AS VARCHAR(2)), 2)
-    ) AS TotalAuditTime,
-    CASE WHEN COUNT(Batch_name) > 0 THEN
-        CONCAT(
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
+        RIGHT('0' + CAST((
+            SUM(
+                DATEPART(SECOND, Audit_Time) +
                 DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) / 3600 AS VARCHAR(10)), 2),
-            ':',
-            RIGHT('0' + CAST(((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 3600) / 60 AS VARCHAR(2)), 2),
-            ':',
-            RIGHT('0' + CAST((SUM(DATEPART(SECOND, Audit_Time) +
-                DATEPART(MINUTE, Audit_Time) * 60 +
-                DATEPART(HOUR, Audit_Time) * 3600) / COUNT(Batch_name)) % 60 AS VARCHAR(2)), 2)
-        )
-    ELSE
-        '00:00:00'
-    END AS AvgAuditTimePerBatch
+                DATEPART(HOUR,   Audit_Time) * 3600
+            ) / COUNT(Batch_name)
+        ) % 60 AS VARCHAR(2)), 2)
+    )
+ELSE '00:00:00'
+END AS AvgAuditTimePerBatch
 FROM (
     SELECT
         Batch_name,
@@ -1123,34 +1182,37 @@ WITH TimeData AS (
         COUNT(Batch_name) AS Batch_Count,
         SUM(sample_count) AS Sample_count,
         SUM(
-            ISNULL(DATEDIFF(SECOND, Start_DateTime, End_DateTime), 0) +
+            ISNULL(DATEDIFF(SECOND, Start_DateTime,  End_DateTime),  0) +
             ISNULL(DATEDIFF(SECOND, Start_DateTime2, End_DateTime2), 0) +
             ISNULL(DATEDIFF(SECOND, Start_DateTime3, End_DateTime3), 0)
         ) AS TotalSeconds
     FROM audit_b
     WHERE status = 2
-    AND CAST(COALESCE(End_DateTime3, End_DateTime2, End_DateTime) AS date)
-        BETWEEN '{fromDateStr}' AND '{toDateStr}'
+      AND CAST(COALESCE(End_DateTime3, End_DateTime2, End_DateTime) AS date)
+          BETWEEN '{fromDateStr}' AND '{toDateStr}'
     GROUP BY Project_Code
 )
-
 SELECT
     Project_Code,
     Batch_Count,
     Sample_count,
     CONCAT(
-        RIGHT('0' + CAST(TotalSeconds / 3600 AS VARCHAR(10)), 2), ':',
-        RIGHT('0' + CAST((TotalSeconds % 3600) / 60 AS VARCHAR(2)), 2), ':',
+        CAST(TotalSeconds / 3600 AS VARCHAR(10)),
+        ':',
+        RIGHT('0' + CAST((TotalSeconds % 3600) / 60 AS VARCHAR(2)), 2),
+        ':',
         RIGHT('0' + CAST(TotalSeconds % 60 AS VARCHAR(2)), 2)
     ) AS TotalAuditTime,
-    CASE WHEN Batch_Count > 0 THEN
-        CONCAT(
-            RIGHT('0' + CAST((TotalSeconds / Batch_Count) / 3600 AS VARCHAR(10)), 2), ':',
-            RIGHT('0' + CAST(((TotalSeconds / Batch_Count) % 3600) / 60 AS VARCHAR(2)), 2), ':',
-            RIGHT('0' + CAST((TotalSeconds / Batch_Count) % 60 AS VARCHAR(2)), 2)
-        )
-    ELSE
-        '00:00:00'
+    CASE 
+        WHEN Batch_Count > 0 THEN
+            CONCAT(
+                CAST((TotalSeconds / Batch_Count) / 3600 AS VARCHAR(10)),
+                ':',
+                RIGHT('0' + CAST(((TotalSeconds / Batch_Count) % 3600) / 60 AS VARCHAR(2)), 2),
+                ':',
+                RIGHT('0' + CAST((TotalSeconds / Batch_Count) % 60 AS VARCHAR(2)), 2)
+            )
+        ELSE '00:00:00'
     END AS AvgAuditTimePerBatch
 FROM TimeData";
 
@@ -1184,6 +1246,27 @@ FROM TimeData";
                     dbConnection?.Close();
             }
         }
+
+        private void DataGridView_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (dataGridView?.SelectionMode == DataGridViewSelectionMode.FullRowSelect)
+            {
+                dataGridView?.SelectionMode = DataGridViewSelectionMode.CellSelect;
+            }
+            else
+            {
+                dataGridView?.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            }
+        }
+
+        private void dataGridView_DataBindingComplete(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            foreach (DataGridViewColumn col in dataGridView?.Columns)
+            {
+                col.SortMode = DataGridViewColumnSortMode.NotSortable;
+            }
+        }
+
 
         private void ExportToExcel_Click(object? sender, EventArgs e)
         {

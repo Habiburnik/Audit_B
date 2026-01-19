@@ -1,11 +1,6 @@
-
 using Microsoft.Data.SqlClient;
+using System.Net;
 using System.Reflection;
-using MethodInvoker = System.Windows.Forms.MethodInvoker;
-using Timer = System.Windows.Forms.Timer;
-using System.Net.Http;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Audit_B;
 
@@ -19,11 +14,14 @@ public partial class LoginForm : Form
     private TextBox? edtLoginPassword;
     private Button? btnLogin;
     private Button? btnCancel;
+    private const string UPDATE_URL = "http://203.76.123.196:8434/Soft/Audit_B.exe";
+    private const string DOWNLOAD_PATH = @"C:\New Software";
     public LoginForm()
     {
         InitializeComponent();
         InitializeDatabase();
 
+        CheckForUpdates();
     }
 
     private void InitializeComponent()
@@ -130,9 +128,9 @@ public partial class LoginForm : Form
             string connectionString = ConfigurationHelper.GetConnectionString();
             dbConnection = new SqlConnection(connectionString);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            MessageBox.Show($"Database initialization error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"Database initialization error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
@@ -173,18 +171,134 @@ public partial class LoginForm : Form
         Application.Exit();
     }
 
-    private bool ValidateSoftwareName()
+    private async void CheckForUpdates()
     {
         try
         {
-            string? assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
-            return assemblyName == "Audit_B";        
+            await Task.Run(() =>
+            {
+                DateTime localBuildDate = GetLocalBuildDate();
+                DateTime? remoteBuildDate = GetRemoteFileModifiedDate(UPDATE_URL);
+
+                if (remoteBuildDate.HasValue && remoteBuildDate.Value > localBuildDate)
+                {
+                    this.Invoke((Action)delegate
+                    {
+                        DownloadUpdate();
+                    });
+                }
+            });
         }
         catch
         {
-            return false;
+            // Silently fail - don't block login
         }
     }
+
+    private DateTime GetLocalBuildDate()
+    {
+        string exePath = Assembly.GetExecutingAssembly().Location;
+        return File.GetLastWriteTime(exePath);
+    }
+
+    private DateTime? GetRemoteFileModifiedDate(string url)
+    {
+        try
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+            request.Method = "HEAD";
+            request.Timeout = 5000;
+
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                return response.LastModified;
+            }
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async void DownloadUpdate()
+    {
+        try
+        {
+            // Create download directory if it doesn't exist
+            if (!Directory.Exists(DOWNLOAD_PATH))
+            {
+                Directory.CreateDirectory(DOWNLOAD_PATH);
+            }
+
+            string fileName = Path.GetFileName(UPDATE_URL);
+            string downloadFilePath = Path.Combine(DOWNLOAD_PATH, fileName);
+
+            // Show progress
+            Form progressForm = new Form
+            {
+                Text = "Downloading Update",
+                Size = new Size(400, 150),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label lblProgress = new Label
+            {
+                Text = "Downloading...",
+                Location = new Point(20, 20),
+                AutoSize = true
+            };
+
+            ProgressBar progressBar = new ProgressBar
+            {
+                Location = new Point(20, 50),
+                Size = new Size(340, 30),
+                Style = ProgressBarStyle.Continuous
+            };
+
+            progressForm.Controls.Add(lblProgress);
+            progressForm.Controls.Add(progressBar);
+            progressForm.Show();
+
+            using (WebClient client = new WebClient())
+            {
+                client.DownloadProgressChanged += (s, e) =>
+                {
+                    progressBar.Value = e.ProgressPercentage;
+                    lblProgress.Text = $"Downloading... {e.ProgressPercentage}%";
+                };
+
+                client.DownloadFileCompleted += (s, e) =>
+                {
+                    progressForm.Close();
+
+                    if (e.Error != null)
+                    {
+                        MessageBox.Show($"Download failed:", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            $"Update downloaded successfully!. Please take the update software from {downloadFilePath}",
+                            "Download Complete",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information
+                        );
+                        Application.Exit();
+                    }
+                };
+
+                await client.DownloadFileTaskAsync(new Uri(UPDATE_URL), downloadFilePath);
+            }
+        }
+        catch (Exception)
+        {
+            MessageBox.Show($"Download error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
 
     private bool ValidateLogin(string username, string password)
     {
@@ -233,9 +347,9 @@ public partial class LoginForm : Form
 
             return false;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            MessageBox.Show($"Login error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"Login error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
         finally
