@@ -337,7 +337,7 @@ public partial class AddNewForm : Form
             if (dbConnection?.State != ConnectionState.Open)
                 dbConnection?.Open();
 
-            string sql = "SELECT USER_NAME, EMP_NAME, card_no FROM EMPLOYEE_INFO WHERE USER_NAME LIKE @search AND AuditB is null ORDER BY EMP_NAME";
+            string sql = "SELECT USER_NAME, EMP_NAME, card_no FROM EMPLOYEE_INFO WHERE USER_NAME LIKE @search AND AuditB = 0 ORDER BY EMP_NAME";
             SqlCommand cmd = new SqlCommand(sql, dbConnection);
             cmd.Parameters.AddWithValue("@search", "%" + txtSearchUser.Text + "%");
             SqlDataReader reader = cmd.ExecuteReader();
