@@ -14,7 +14,7 @@ public partial class LoginForm : Form
     private TextBox? edtLoginPassword;
     private Button? btnLogin;
     private Button? btnCancel;
-    private const string UPDATE_URL = "http://203.76.123.196:8434/Soft/Audit_B.exe";
+    private const string UPDATE_URL = "http://10.0.0.24:8434/Soft/Audit_B.exe";
     private const string DOWNLOAD_PATH = @"C:\New Software";
     public LoginForm()
     {
@@ -22,6 +22,18 @@ public partial class LoginForm : Form
         InitializeDatabase();
 
         CheckForUpdates();
+        string exePath = Application.StartupPath;
+        if (exePath.StartsWith(@"\\"))
+        {
+            MessageBox.Show(
+                "Please copy this application to your PC and run it from there.",
+                "Cannot Run on Network Path",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            );
+
+            Application.Exit(); // Close the application
+        }
     }
 
     private void InitializeComponent()
@@ -34,6 +46,18 @@ public partial class LoginForm : Form
         this.MinimizeBox = false;
         // this.Icon = new Icon("AuditB_icon.ico");
         // this.BackColor = Color.FromArgb(139, 175, 185);
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            using (var stream = assembly.GetManifestResourceStream("Audit_B.AuditB_icon.ico"))
+            {
+                if (stream != null)
+                {
+                    this.Icon = new Icon(stream);
+                }
+            }
+        }
+        catch { }
 
         // Logo
         Label lblLogoArea = new Label();
@@ -89,7 +113,7 @@ public partial class LoginForm : Form
         lblUserAuthentication.Location = new Point(285, 150);
         lblUserAuthentication.Size = new Size(320, 20);
         lblUserAuthentication.ForeColor = Color.Red;
-        lblUserAuthentication.Font = new Font("Arial", 10);
+        lblUserAuthentication.Font = new Font("Arial", 9);
 
         // Login Button
         btnLogin = new Button();
@@ -307,49 +331,45 @@ public partial class LoginForm : Form
             if (dbConnection?.State != System.Data.ConnectionState.Open)
                 dbConnection?.Open();
 
-            // // Check if login is numeric (Operator ID)
-            // if (int.TryParse(username, out int operatorId))
-            // {
-            //     string query = "SELECT passwd, status FROM Operators WHERE operatorId = @Username";
-            //     SqlCommand cmd = new SqlCommand(query, dbConnection);
-            //     cmd.Parameters.AddWithValue("@Username", username);
+            string query = "SELECT user_Password, AuditB FROM Employee_INFO WHERE User_name = @Username";
+            SqlCommand cmd = new SqlCommand(query, dbConnection);
+            cmd.Parameters.AddWithValue("@Username", username);
+            SqlDataReader reader = cmd.ExecuteReader();
 
-            //     SqlDataReader reader = cmd.ExecuteReader();
-            //     if (reader.HasRows)
-            //     {
-            //         reader.Read();
-            //         string passwd = reader["passwd"].ToString() ?? "";
-            //         int status = (int)reader["status"];
-            //         reader.Close();
-
-            //         return passwd == password && status == 0;
-            //     }
-            //     reader.Close();
-            // }
-            // else
+            if (reader.HasRows)
             {
-                // Employee login
-                string query = "SELECT user_Password FROM Employee_INFO WHERE User_name = @Username";
-                SqlCommand cmd = new SqlCommand(query, dbConnection);
-                cmd.Parameters.AddWithValue("@Username", username);
-
-                SqlDataReader reader = cmd.ExecuteReader();
-                if (reader.HasRows)
-                {
-                    reader.Read();
-                    string userPassword = reader["user_Password"].ToString() ?? "";
-                    reader.Close();
-
-                    return userPassword == password;
-                }
+                reader.Read();
+                string userPassword = reader["user_Password"].ToString() ?? "";
+                int auditB = reader.IsDBNull(reader.GetOrdinal("AuditB")) ? 0 : reader.GetInt32(reader.GetOrdinal("AuditB"));
                 reader.Close();
+
+                // Check password first
+                if (userPassword != password)
+                {
+                    MessageBox.Show("Invalid password", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+
+                // Check access permission
+                if (auditB == -1 || auditB == 1 || auditB == 2 || auditB == 3)
+                {
+                    return true;
+                }
+                else
+                {
+                    MessageBox.Show("You do not have access for this software", "Access Denied",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
             }
 
+            reader.Close();
+            MessageBox.Show("Invalid username", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            MessageBox.Show($"Login error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show($"Login error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
         }
         finally

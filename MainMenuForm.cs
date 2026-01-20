@@ -6,6 +6,8 @@ namespace Audit_B;
 public partial class MainMenuForm : Form
 {
     private SqlConnection? dbConnection;
+    private SqlConnection? dbConnection2;
+    private SqlConnection? dbConnection3;
     // UI Components
     private MenuStrip? mainMenu;
     private Panel? pnlInfo;
@@ -55,10 +57,23 @@ public partial class MainMenuForm : Form
         this.BackColor = Color.FromArgb(230, 230, 230);
         this.FormClosing += MainMenuFormClosing;
         this.IsMdiContainer = true;
-        this.Height = 380;  
+        this.Height = 380;
         this.Width = 1030;
         this.Location = new Point(170, 170);
         // this.Icon = new Icon("AuditB_icon.ico");
+
+        try
+        {
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            using (var stream = assembly.GetManifestResourceStream("Audit_B.AuditB_icon.ico"))
+            {
+                if (stream != null)
+                {
+                    this.Icon = new Icon(stream);
+                }
+            }
+        }
+        catch { }
 
         // Main Menu
         mainMenu = new MenuStrip();
@@ -308,7 +323,7 @@ public partial class MainMenuForm : Form
         // Load user info and projects on startup
         if (!string.IsNullOrEmpty(currentUsername))
         {
-            LoadUserInfo(currentUsername, 0);
+            LoadUserInfo(currentUsername, edtUserId.Text, 0);
         }
     }
 
@@ -318,6 +333,8 @@ public partial class MainMenuForm : Form
         {
             string connectionString = ConfigurationHelper.GetConnectionString();
             dbConnection = new SqlConnection(connectionString);
+            dbConnection2 = new SqlConnection(connectionString);
+            dbConnection3 = new SqlConnection(connectionString);
         }
         catch (Exception ex)
         {
@@ -353,7 +370,7 @@ public partial class MainMenuForm : Form
     {
         try
         {
-            var addForm = new AddNewForm();
+            var addForm = new AddNewForm(this);
             addForm.StartPosition = FormStartPosition.CenterParent;
             addForm.ShowDialog(this);
         }
@@ -390,6 +407,7 @@ public partial class MainMenuForm : Form
     private void Refresh_Click(object? sender, EventArgs e)
     {
         LoadProjects();
+        LoadCurrentBatch(int.Parse(edtUserId?.Text ?? "0"));
     }
 
     private void MMExit_Click(object? sender, EventArgs e)
@@ -1029,7 +1047,7 @@ public partial class MainMenuForm : Form
         // Menu visibility is now managed by the menu structure
     }
 
-    private void LoadUserInfo(string username, int auditB)
+    private void LoadUserInfo(string username, string userId, int auditB)
     {
         try
         {
@@ -1071,7 +1089,7 @@ public partial class MainMenuForm : Form
         {
             if (dbConnection?.State != ConnectionState.Open)
                 dbConnection?.Open();
-            string query = "SELECT user_Password, Audit_B FROM Employee_Info WHERE User_name = @Username";
+            string query = "SELECT user_Password, AuditB FROM Employee_Info WHERE User_name = @Username";
             SqlCommand cmd = new SqlCommand(query, dbConnection);
             cmd.Parameters.AddWithValue("@Username", username);
 
@@ -1079,10 +1097,10 @@ public partial class MainMenuForm : Form
             if (reader.HasRows)
             {
                 reader.Read();
-                int auditB = reader.IsDBNull(reader.GetOrdinal("Audit_B")) ? 0 : reader.GetInt32(reader.GetOrdinal("Audit_B"));
+                int auditB = reader.IsDBNull(reader.GetOrdinal("AuditB")) ? 0 : reader.GetInt32(reader.GetOrdinal("AuditB"));
                 reader.Close();
 
-                // Set visibility based on Audit_B value
+                // Set visibility based on AuditB value
                 if (auditB == 1)
                 {
                     mmReport?.Visible = false;
@@ -1255,13 +1273,13 @@ public partial class MainMenuForm : Form
     {
         try
         {
-            if (dbConnection?.State != ConnectionState.Open)
-                dbConnection?.Open();
+            if (dbConnection3?.State != ConnectionState.Open)
+                dbConnection3?.Open();
 
             string query = @"SELECT b.project_code, b.status, b.batch_name FROM audit_B b 
                            JOIN employee_info e ON e.emp_id = b.emp_id 
                            WHERE b.emp_id = @userid AND b.status = 1";
-            SqlCommand cmd = new SqlCommand(query, dbConnection);
+            SqlCommand cmd = new SqlCommand(query, dbConnection3);
             cmd.Parameters.AddWithValue("@userid", userId);
 
             SqlDataReader reader = cmd.ExecuteReader();
@@ -1276,7 +1294,13 @@ public partial class MainMenuForm : Form
                 {
                     lbProjectList?.SelectedIndex = (int)projectIndex;
                 }
-    
+
+                int? batchIndex = lbBatchList?.Items.IndexOf(batchName);
+                if (batchIndex >= 0)
+                {
+                    lbBatchList?.SelectedIndex = (int)batchIndex;
+                }
+
                 btnStart?.Enabled = false;
                 btnAuditSuspend?.Enabled = true;
                 btnComplete?.Enabled = true;
@@ -1291,8 +1315,8 @@ public partial class MainMenuForm : Form
         }
         finally
         {
-            if (dbConnection?.State == ConnectionState.Open)
-                dbConnection?.Close();
+            if (dbConnection3?.State == ConnectionState.Open)
+                dbConnection3?.Close();
         }
     }
 
@@ -1335,8 +1359,8 @@ public partial class MainMenuForm : Form
                 return;
             }
 
-            if (dbConnection?.State != ConnectionState.Open)
-                dbConnection?.Open();
+            if (dbConnection2?.State != ConnectionState.Open)
+                dbConnection2?.Open();
 
             // Query to get batch details
             string query = @"SELECT project_code, batch_name, line, comments 
@@ -1348,7 +1372,7 @@ public partial class MainMenuForm : Form
                             (status IN (-1, 1) AND " + edtEmpType?.Text + @" = @userid)
                         )";
 
-            SqlCommand cmd = new SqlCommand(query, dbConnection);
+            SqlCommand cmd = new SqlCommand(query, dbConnection2);
             cmd.Parameters.AddWithValue("@Batch_name", batchName);
             cmd.Parameters.AddWithValue("@userid", userId);
 
@@ -1383,8 +1407,8 @@ public partial class MainMenuForm : Form
         }
         finally
         {
-            if (dbConnection?.State == ConnectionState.Open)
-                dbConnection?.Close();
+            if (dbConnection2?.State == ConnectionState.Open)
+                dbConnection2?.Close();
         }
     }
 

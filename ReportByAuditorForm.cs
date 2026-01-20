@@ -87,6 +87,19 @@ namespace Audit_B
             this.KeyDown += Form_KeyDown;
             // this.Icon = new Icon("AuditB_icon.ico");
 
+            try
+            {
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                using (var stream = assembly.GetManifestResourceStream("Audit_B.AuditB_icon.ico"))
+                {
+                    if (stream != null)
+                    {
+                        this.Icon = new Icon(stream);
+                    }
+                }
+            }
+            catch { }
+
             // ===== TOP PANEL =====
             pnlTop = new Panel();
             pnlTop.Dock = DockStyle.Top;
