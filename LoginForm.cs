@@ -34,6 +34,15 @@ public partial class LoginForm : Form
 
             Application.Exit(); // Close the application
         }
+
+        if (!ValidateSoftwareName())
+        {
+            MessageBox.Show("Software name cannot be changed!", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            Environment.Exit(0);
+            return;
+        }
+
     }
 
     private void InitializeComponent()
@@ -323,6 +332,22 @@ public partial class LoginForm : Form
         }
     }
 
+    private bool ValidateSoftwareName()
+    {
+        try
+        {
+            string exeName =
+                System.IO.Path.GetFileNameWithoutExtension(
+                    Environment.ProcessPath ?? string.Empty
+                );
+    
+            return exeName == "Audit_B";
+        }
+        catch
+        {
+            return false;
+        }
+    }
 
     private bool ValidateLogin(string username, string password)
     {

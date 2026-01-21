@@ -110,7 +110,7 @@ public partial class AddNewForm : Form
         rb1.Checked = true;
 
         lblSelectProjectCode = new Label() { Text = "Select_Project_Code :", Location = new Point(15, 50), AutoSize = true };
-        cbProjectCode = new ComboBox() { Location = new Point(160, 47), Size = new Size(240, 24), DropDownStyle = ComboBoxStyle.DropDownList };
+        cbProjectCode = new ComboBox() { Location = new Point(160, 47), Size = new Size(240, 24), DropDownStyle = ComboBoxStyle.DropDown };
 
         txtBatchList = new TextBox() { Location = new Point(15, 85), Size = new Size(385, 120), Multiline = true, ScrollBars = ScrollBars.Vertical };
 
